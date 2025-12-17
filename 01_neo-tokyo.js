@@ -1,7 +1,9 @@
-// 1. Set the Tempo
-// We use a half-time feel. 140 BPM is fast (Cyberpunk), 
-// but we feel it at 70 BPM (Lofi).
-setcpm(140/4)
+// 01_NEO_TOKYO.EXE
+// SYSTEM: STRUDEL_CORE_v1
+// VIBE: CYBERPUNK / LOFI / ANIME OP 
+// IG: @SANTHU.OFFSHORE
+
+setcpm(140/4) // Half-time feel (70 BPM feel)
 
 // 2. The Anime Chords (The Soul)
 // We use 'gm_epiano1' for that classic anime intro sound.

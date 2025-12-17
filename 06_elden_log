@@ -1,0 +1,53 @@
+// 06_ELDEN_LOG.ROM
+// SYSTEM: FROM_SOFTWARE_ARCHIVE
+// VIBE: BOSS ROOM / FINAL POLISH / CINEMATIC
+// IG: @SANTHU.OFFSHORE
+
+setcpm(55/4)
+
+stack(
+  // 1. THE BELL (The Focus) - FIXED
+  // Added 'hpf(300)' to cut the mud, 'shape' to make it crunch.
+  // It now cuts through the mix like a knife.
+  note("c4")
+    .s("tubular_bells")
+    .hpf(300)       // Removes low resonance clashing with bass
+    .shape(0.5)     // Adds saturation/presence
+    .room(5).gain(1.6),
+
+  // 2. THE CHOIR (The Support)
+  // [C3, G3] provides the harmonic bed.
+  note("[c3, g3]")
+    .s("gm_choir_aahs")
+    .vowel("a")
+    .gain(0.85),    // Lowered slightly to let Bell win
+
+  // 3. GIANT'S FOOTSTEPS (The Impact)
+  note("c2").struct("x ~ x ~")
+    .s("gm_timpani")
+    .shape(0.7).lpf(800)
+    .gain(1.1),
+
+  // 4. CHAINS (The Texture)
+  // Cleaned up: Lowered gain so it doesn't distract.
+  s("glitch*8")
+    .n(run(8))
+    .hpf(3000)
+    .pan(rand).gain(0.5),
+
+  // 5. THE SORROW (The Melody) - FIXED
+  // Moved to C5. C3 was too low (muddy). C6 was too high (thin).
+  // C5 is the "Goldilocks" zone—clear and emotional.
+  note("~ c5 bb4 g4")
+    .s("gm_celesta")
+    .delay(0.5)
+    .room(4)
+    .gain(1.1),
+
+  // 6. THE ABYSS (The Foundation)
+  note("c2")
+    .s("triangle")
+    .shape(0.8)
+    .lpf(300)
+    .gain(1.2)
+)
