@@ -1,0 +1,492 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ANDÚRIL_OS // AUDIO_DECK</title>
+    
+    <link href="https://fonts.googleapis.com/css2?family=VT323&display=swap" rel="stylesheet">
+
+    <style>
+        /* * =========================================
+         * SYSTEM ARCHITECTURE: SANTHU_CORE_v7
+         * =========================================
+         */
+
+        :root {
+            --hex-primary: #00ff41;
+            --hex-dim:     #008f11;
+            --hex-gold:    #ffd700;
+            --hex-dark:    #050505;
+            --crt-scan:    rgba(18, 16, 16, 0);
+            --crt-grid:    rgba(0, 0, 0, 0.25);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            background-color: #000;
+            color: var(--hex-primary);
+            font-family: 'VT323', monospace;
+            margin: 0;
+            padding: 0;
+            height: 100dvh; 
+            width: 100vw;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            user-select: none;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* --- 1. COLD BOOT OVERLAY --- */
+        #cold-boot {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: #000;
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            cursor: pointer;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .init-btn {
+            border: 1px solid var(--hex-dim);
+            padding: 20px 40px;
+            color: var(--hex-primary);
+            font-size: 1.5rem;
+            letter-spacing: 3px;
+            background: transparent;
+            text-shadow: 0 0 10px var(--hex-dim);
+            animation: breathe 2s infinite ease-in-out;
+            transition: 0.3s;
+            text-transform: uppercase;
+            width: auto;
+            max-width: 90vw;
+            white-space: nowrap;
+        }
+
+        @media (max-width: 400px) {
+            .init-btn { font-size: 1.1rem; padding: 15px 20px; letter-spacing: 1px; }
+        }
+
+        .init-btn:hover {
+            background: var(--hex-dim);
+            color: #000;
+            box-shadow: 0 0 30px var(--hex-primary);
+        }
+
+        /* --- 2. MAIN SYSTEM --- */
+        #system-container {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            opacity: 0;
+            visibility: hidden;
+        }
+
+        /* --- 3. ANIMATIONS --- */
+        .power-on-anim {
+            animation: turnOn 3s linear forwards;
+            visibility: visible !important;
+        }
+
+        @keyframes turnOn {
+            0% { transform: scale(1, 0.8) translate3d(0, 0, 0); filter: brightness(30); opacity: 1; }
+            3.5% { transform: scale(1, 0.8) translate3d(0, 100%, 0); }
+            3.6% { transform: scale(1, 0.8) translate3d(0, -100%, 0); opacity: 1; }
+            9% { transform: scale(1.3, 0.6) translate3d(0, 100%, 0); filter: brightness(30); opacity: 0; }
+            11% { transform: scale(1, 1) translate3d(0, 0, 0); filter: contrast(0) brightness(0) ; opacity: 0; }
+            100% { transform: scale(1, 1) translate3d(0, 0, 0); filter: contrast(1) brightness(1) saturate(1); opacity: 1; }
+        }
+
+        @keyframes breathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+        @keyframes blink { 50% { opacity: 0; } }
+        @keyframes pulse-gold {
+            0% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); text-shadow: 0 0 2px var(--hex-gold); }
+            50% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.5); text-shadow: 0 0 10px var(--hex-gold); }
+            100% { box-shadow: 0 0 5px rgba(255, 215, 0, 0.2); text-shadow: 0 0 2px var(--hex-gold); }
+        }
+        
+        @keyframes glitch {
+            0% { text-shadow: 2px 0 red, -2px 0 blue; }
+            95% { text-shadow: 2px 0 red, -2px 0 blue; }
+            96% { text-shadow: -2px 0 red, 2px 0 blue; transform: translate(2px,0); }
+            98% { text-shadow: 2px 0 red, -2px 0 blue; transform: translate(-2px,0); }
+            100% { text-shadow: 2px 0 red, -2px 0 blue; transform: translate(0,0); }
+        }
+
+        /* --- 4. LOGS & FX --- */
+        #kernel-log {
+            position: fixed;
+            top: 20px; left: 20px;
+            z-index: 5000;
+            font-size: 1.1rem;
+            pointer-events: none;
+        }
+        
+        .log-entry { margin-bottom: 5px; text-shadow: 0 0 5px var(--hex-dim); }
+        .log-gold { color: var(--hex-gold); text-shadow: 0 0 5px var(--hex-gold); }
+
+        .overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 100; }
+        .scanlines { background: linear-gradient(to bottom, var(--crt-scan) 50%, var(--crt-grid) 50%); background-size: 100% 4px; }
+        .vignette { box-shadow: inset 0 0 150px rgba(0,0,0,0.9); }
+
+        /* --- 5. LAYOUT --- */
+        header {
+            padding: 15px 20px;
+            border-bottom: 2px solid var(--hex-dim);
+            display: flex; justify-content: space-between; align-items: center;
+            font-size: 1.3rem; letter-spacing: 2px;
+            flex-shrink: 0;
+            position: relative;
+        }
+        
+        .sys-title {
+            animation: glitch 5s infinite;
+        }
+
+        main { 
+            display: flex; 
+            flex: 1; 
+            overflow: hidden; 
+            position: relative;
+        }
+
+        /* --- SIDEBAR --- */
+        .controller {
+            width: 300px; 
+            background: #020202;
+            border-right: 2px solid var(--hex-dim);
+            padding: 25px; 
+            display: flex; 
+            flex-direction: column; 
+            gap: 15px;
+            flex-shrink: 0; 
+            overflow-y: auto; 
+            z-index: 10;
+        }
+
+        .io-btn {
+            background: rgba(0, 20, 0, 0.3); border: 1px solid var(--hex-dim);
+            color: var(--hex-dim); padding: 15px;
+            font-family: 'VT323', monospace; font-size: 1.2rem;
+            cursor: pointer; text-align: left; transition: 0.1s;
+            position: relative;
+        }
+        .io-btn:hover { background: var(--hex-dim); color: #000; box-shadow: 0 0 10px var(--hex-dim); padding-left: 20px; }
+        .io-btn.active { background: var(--hex-primary); color: #000; border-color: var(--hex-primary); font-weight: bold; }
+        .io-btn.active::after { content: " [ON_AIR]"; font-size: 0.8em; float: right; animation: blink 1s infinite; }
+
+        .metadata { 
+            margin-top: auto; border-top: 1px dashed var(--hex-dim); 
+            padding-top: 15px; font-size: 0.95rem; line-height: 1.5; padding-bottom: 20px;
+        }
+        
+        .ux-god-badge {
+            color: var(--hex-gold); border: 1px solid var(--hex-gold); padding: 2px 8px;
+            display: inline-block; margin-top: 5px; font-size: 0.8rem;
+            text-transform: uppercase; letter-spacing: 1px;
+            animation: pulse-gold 3s infinite ease-in-out;
+        }
+        
+        .social-link { color: var(--hex-dim); text-decoration: none; display: block; margin-top: 5px; transition: 0.2s; }
+        .social-link:hover { color: var(--hex-primary); padding-left: 5px; }
+
+        /* --- IFRAME AREA --- */
+        .viewport { 
+            flex: 1; 
+            background: #080808; 
+            position: relative; 
+            overflow: hidden; 
+        }
+        
+        iframe {
+            width: 100%; height: 100%; border: none;
+            filter: invert(100%) sepia(100%) hue-rotate(85deg) saturate(350%) contrast(1.2);
+            opacity: 0.9; transform: scale(1.02);
+            pointer-events: auto; 
+        }
+
+        /* --- SYSTEM FOOTER (New v7 Feature) --- */
+        footer {
+            height: 30px;
+            background: #000;
+            border-top: 2px solid var(--hex-dim);
+            display: flex;
+            align-items: center;
+            padding: 0 20px;
+            font-size: 0.9rem;
+            color: var(--hex-dim);
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        /* --- SCROLLBARS --- */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #020202; }
+        ::-webkit-scrollbar-thumb { background: var(--hex-dim); }
+
+        /* --- MOBILE OPTIMIZATION (THE NUCLEAR FIX) --- */
+        @media (max-width: 768px) {
+            .init-btn { font-size: 1.2rem; padding: 15px 25px; }
+            
+            main { flex-direction: column; }
+            
+            .controller { 
+                width: 100%; height: auto; max-height: 35vh; 
+                flex-direction: row; flex-wrap: wrap; overflow-y: auto; 
+                border-right: none; border-bottom: 2px solid var(--hex-dim); 
+                padding: 10px;
+            }
+            
+            .io-btn { flex: 1 1 40%; min-width: 120px; font-size: 1rem; padding: 10px; }
+            
+            .metadata { display: none; }
+            
+            .controller::after {
+                content: "GOD_OF_UX // SANTHU"; width: 100%; text-align: center; font-size: 0.8rem;
+                color: var(--hex-gold); padding-top: 5px; opacity: 0.7;
+            }
+
+            /* --- THE INVERSE SCALE HACK --- 
+               We make the iframe 150% width so Strudel renders "Desktop Mode".
+               Then we shrink it down (scale 0.67) to fit the phone.
+               This forces the Play button to be visible and clickable.
+            */
+            .viewport {
+                overflow: hidden; /* Lock overflow */
+            }
+            
+            iframe {
+                width: 150% !important;
+                height: 150% !important;
+                transform: scale(0.666) !important; /* 1 / 1.5 = 0.666 */
+                transform-origin: 0 0; /* Anchor to top left */
+                pointer-events: auto;
+            }
+            
+            footer { display: none; /* Hide footer on mobile to save space */ }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="cold-boot" onclick="sys.powerOn()">
+        <div class="init-btn">[ INITIALIZE ANDÚRIL_OS ]</div>
+        <div style="margin-top: 20px; font-size: 0.9rem; color: #444; text-align: center; line-height: 1.4;">
+            CLICK TO ENGAGE MACHINE SPIRIT<br>
+            <span style="font-size: 0.8em; opacity: 0.5">AUDIO OUTPUT REQUIRED</span>
+        </div>
+    </div>
+
+    <div id="kernel-log"></div>
+
+    <div class="overlay scanlines"></div>
+    <div class="overlay vignette"></div>
+
+    <div id="system-container">
+        <header>
+            <div class="sys-title">ANDÚRIL_OS // v7.0</div>
+            <div>PILOT: <span style="color: var(--hex-gold)">SANTHU</span></div>
+        </header>
+
+        <main>
+            <section class="controller">
+                <div style="color: #fff; margin-bottom: 5px; opacity: 0.7; width: 100%; font-size: 0.9rem;">// DECK_CONTROLS</div>
+                
+                <button class="io-btn" onmouseenter="sys.sfx('hover')" onclick="sys.mount('neoTokyo', this)">
+                    01_NEO_TOKYO.js
+                </button>
+                
+                <button class="io-btn" onmouseenter="sys.sfx('hover')" onclick="sys.mount('sewerDoom', this)">
+                    02_SEWER_DOOM.js
+                </button>
+
+                <div class="metadata">
+                    :: SYS_IDENTITY ::<br>
+                    > ALIAS: ANDLAUS ANDÚRIL<br>
+                    > RANK: TECH_PRIEST<br>
+                    <span class="ux-god-badge">★ GOD OF UX</span><br>
+                    <br>
+                    > MODULES_LOADED:<br>
+                    [+] GUNDAM_DB (PSYCHO-FRAME)<br>
+                    [+] WARHAMMER_40K (PURGED)<br>
+                    [+] ANIME_ARCHIVE (18Y)<br>
+                    [+] TCG_VAULT (SECURE)<br>
+                    <br>
+                    > LINKS:<br>
+                    <a href="https://instagram.com/santhu.offshore" target="_blank" class="social-link" onmouseenter="sys.sfx('hover')">
+                        @SANTHU.OFFSHORE
+                    </a>
+                    <a href="https://github.com/Santhusha-UX/my-strudel-music" target="_blank" class="social-link" onmouseenter="sys.sfx('hover')">
+                        GITHUB/REPO_SOURCE
+                    </a>
+                    <a href="https://www.linkedin.com/in/ux-santhusha/" target="_blank" class="social-link" onmouseenter="sys.sfx('hover')">
+                        LINKEDIN/UX-SANTHUSHA
+                    </a>
+                </div>
+            </section>
+
+            <section class="viewport">
+                <iframe id="main-bus" allow="midi; audio" scrolling="no" src=""></iframe>
+            </section>
+        </main>
+
+        <footer>
+            <div id="uptime">UPTIME: 00:00:00</div>
+            <div>STATUS: ONLINE_SECURE</div>
+        </footer>
+    </div>
+
+    <script>
+        /**
+         * ANDÚRIL_OS v7.0 (FINAL GOLD MASTER)
+         * Developed by Santhu (God of UX)
+         */
+
+        const RESOURCES = {
+            tracks: {
+                neoTokyo: "https://strudel.cc/?embed=1#Ci8vIDEuIFNldCB0aGUgVGVtcG8KLy8gV2UgdXNlIGEgaGFsZi10aW1lIGZlZWwuIDE0MCBCUE0gaXMgZmFzdCAoQ3liZXJwdW5rKSwgCi8vIGJ1dCB3ZSBmZWVsIGl0IGF0IDcwIEJQTSAoTG9maSkuCnNldGNwbSgxNDAvNCkKCi8vIDIuIFRoZSBBbmltZSBDaG9yZHMgKFRoZSBTb3VsKQovLyBXZSB1c2UgJ2dtX2VwaWFubzEnIGZvciB0aGF0IGNsYXNzaWMgYW5pbWUgaW50cm8gc291bmQuCi8vIFdlIHBsYXkgNCBub3RlcyBhdCBvbmNlIFswLDIsNCw2XSAoYSA3dGggY2hvcmQpIHRvIG1ha2UgaXQgbHVzaC4KJDogbigiPFswLDIsNCw2XSBbLTIsMCwyLDRdIFstNCwtMiwwLDJdIFstMywtMSwxLDNdPiIpCiAgLnNjYWxlKCJBOm1pbm9yIikKICAuc291bmQoImdtX2VwaWFubzEiKS5jaG9wKDQpCiAgLmxwZigxNTAwKSAgICAgIC8vIExvdyBQYXNzIEZpbHRlcjogY3V0cyBoaWdoIGZyZXF1ZW5jaWVzIHRvIG1ha2UgaXQgIm11ZmZsZWQiIChMb2ZpKQogIC5yb29tKDIpICAgICAgICAvLyBCaWcgcmV2ZXJiIGZvciB0aGF0ICJkcmVhbSBzZXF1ZW5jZSIgdmliZQogIC5nYWluKDAuOCkKCi8vIDMuIFRoZSBDeWJlciBEcnVtcyAoVGhlIEdyaXQpCi8vIFdlIHVzZSAnY3J1c2gnIHRvIHJlZHVjZSB0aGUgYXVkaW8gcXVhbGl0eSAoQml0Y3J1c2hpbmcpIGZvciB0aGF0IGhhY2tpbmcvZ2xpdGNoIGZlZWwuCi8vIFRoZSByaHl0aG0gaXMgYSAiQnJlYWtiZWF0IiBwYXR0ZXJuIChraWNrLi4uIHNuYXJlLWtpY2stc25hcmUpLgokOiBzKCJiZCBbfiBzZF0gW34gYmRdIFtzZCB%2BXSIpCiAgLmJhbmsoIlJvbGFuZFRSOTA5IikgLy8gOTA5IGtpdCBpcyBjbGFzc2ljIHRlY2huby9ob3VzZQogIC5jcnVzaCg2KSAgICAgICAgICAgIC8vIDwtLS0gVEhFIENZQkVSUFVOSyBTQVVDRSAoQml0Y3J1c2hlcikKICAuc2hhcGUoMC41KSAgICAgICAgICAvLyBBZGRzIGRpc3RvcnRpb24KICAuZ2FpbigwLjkpCgovLyA0LiBUaGUgSGktSGF0cyAoVGhlIFNwZWVkKQovLyBGYXN0LCB0aWNraW5nIGhhdHMgbWFrZSBpdCBmZWVsIHVyZ2VudCBhbmQgZnV0dXJpc3RpYy4KJDogcygiaGgqOCIpCiAgLmJhbmsoIlJvbGFuZFRSOTA5IikKICAubWFzaygiPDEgMSAwIDE%2BIikgICAvLyAnbWFzaycgc2lsZW5jZXMgcGFydHMgb2YgdGhlIHBhdHRlcm4gcmh5dGhtaWNhbGx5IChnbGl0Y2hpbmcpCiAgLnBhbihzaW5lLnJhbmdlKDAsMSkuc2xvdygyKSkgLy8gQXV0by1wYW5uaW5nIGxlZnQgdG8gcmlnaHQKCi8vIDUuIFRoZSBSZWVzZSBCYXNzIChUaGUgSGVhdnkpCi8vIEEgZGVlcCwgZ3Jvd2xpbmcgU2F3dG9vdGggd2F2ZS4KJDogbigiPDAgLTIgLTQgLTM%2BIikKICAuc2NhbGUoIkE6bWlub3IiKQogIC5zb3VuZCgic2F3dG9vdGgiKQogIC5scGYoc2luZS5yYW5nZSgxMDAsIDgwMCkuc2xvdyg0KSkgLy8gVGhlIGZpbHRlciBtb3ZlcyB1cCBhbmQgZG93biAoV29iYmxlIGJhc3MpCiAgLmN1dCgxKSAvLyBFbnN1cmVzIGJhc3Mgbm90ZXMgZG9uJ3Qgb3ZlcmxhcCBhbmQgZ2V0IG11ZGR5CgovLyA2LiBUaGUgVGVsZXBob25lIFZvY2FsIChGSVhFRCkKJDogcygibnVtYmVyczoxIG51bWJlcnM6MiBudW1iZXJzOjMgbnVtYmVyczo0IikKICAudm93ZWwoIjxhIG8gZSBpPiIpIC8vIE1ha2luZyB0aGUgcm9ib3QgInNwZWFrIgogIC5kaXN0b3J0KDAuNSkgICAgICAgLy8gQWRkIHNvbWUgc3RhdGlj",
+                sewerDoom: "https://strudel.cc/?embed=1#Ci8vIDEuIEhlYXZ5IFNsb2cgVGVtcG8KLy8gU2xvdyBlbm91Z2ggdG8gZmVlbCBoZWF2eSwgZmFzdCBlbm91Z2ggdG8gbm9kIHRvLgpzZXRjcG0oMTM1LzQpCgovLyAyLiBUaGUgIkd1dCBXcmVuY2hpbmciIEJhc3MKLy8gV2UgdXNlIGEgc2F3dG9vdGggd2F2ZSwgYnV0IHdlIHVzZSAuc2hhcGUoKSB0byBkaXN0b3J0IGl0IGludG8gYSBzcXVhcmUgd2F2ZS4KLy8gV2UgcGxheSB2ZXJ5IGxvdyBub3RlcyAoLTIgb2N0YXZlcykuCiQ6IG4oIjwwIC0xPiIpCiAgLnNjYWxlKCJBOnBocnlnaWFuIikgLy8gUGhyeWdpYW4gbW9kZSA9IERhcmsgYW5kIGV4b3RpYwogIC5zKCJzYXd0b290aCIpCiAgLmN1dCgxKSAgICAgICAgICAvLyBTdG9wcyB0aGUgYmFzcyBub3RlcyBmcm9tIG11ZGR5aW5nIGVhY2ggb3RoZXIKICAubHBmKDQwMCkgICAgICAgIC8vIEtlZXBzIGl0IGRlZXAuIE5vIGhpZ2ggZnJlcXVlbmNpZXMgYWxsb3dlZAogIC5scHEoMikgICAgICAgICAgLy8gTG93ZXIgcmVzb25hbmNlIHNvIGl0IGRvZXNuJ3QgIndoaXN0bGUiCiAgLnNoYXBlKDAuNCkgICAgIC8vIExlc3MgZGlzdG9ydGlvbiwganVzdCBlbm91Z2ggdG8gYmUgaGVhdnkKICAuZ2FpbigwLjcpICAgICAgLy8gTG93ZXIgdm9sdW1lIHNvIGl0IHNpdHMgdW5kZXIgdGhlIGRydW1zCiAgLnJvb20oMCkgICAgICAgIC8vIEJhc3Mgc2hvdWxkbid0IGhhdmUgcmV2ZXJiIChtYWtlcyBpdCBtdWRkeSkKCi8vIDMuIFRoZSAiUGFuaWMiIEFycGVnZ2lvCi8vIEZhc3QsIG1ldGFsbGljIGJsaXBzIHRoYXQgY3JlYXRlIGFueGlldHkuCiQ6IG4oIjAgWzAgNF0gfiBbNyAxXSIpCiAgLnNjYWxlKCJBOnBocnlnaWFuIikgLy8gUGhyeWdpYW4gbW9kZSA9IERhcmsgYW5kIGV4b3RpYwogIC5zKCJzYXd0b290aCIpCiAgLmN1dCgxKSAgICAgICAgIC8vIERvdWJsZSBzcGVlZAogIC5jbGlwKDAuNSkgICAgICAgLy8gSGFyZCBjbGlwcGluZyBmb3IgYSBtZXRhbGxpYyBzb3VuZAogIC5kZWxheSgwLjMpLmRlY2F5KDAuMSkgLy8gU2hvcnQgZGVjYXkgbWFrZXMgaXQgcGVyY3Vzc2l2ZQogIC5wYW4ocmFuZCkgICAgICAgLy8gUmFuZG9tbHkganVtcHMgbGVmdCBhbmQgcmlnaHQgaW4geW91ciBlYXJzCgovLyA0LiBUaGUgSW5kdXN0cmlhbCBEcnVtcwovLyBObyBzb2Z0IGphenoga2l0cyBoZXJlLiBXZSB3YW50IG1lY2hhbmljYWwgbm9pc2UuCiQ6IHMoImJkIFt%2BIHNkXSBiZCBbc2QgPH4gYmQ%2BXSIpCiAgLnBseSg0KQogIC5iYW5rKCJMaW5uRHJ1bSIpIC8vIENsYXNzaWMgODBzIGluZHVzdHJpYWwgZHJ1bSBzb3VuZAogIC5zaGFwZSgwLjYpICAgICAgIC8vIERpc3RvcnRzIHRoZSBkcnVtcwogIC5yb29tKDAuNSkgICAgICAgIC8vIEFkZHMgYSBtZXRhbGxpYyByb29tIHJldmVyYgogIAovLyA1LiBUaGUgIlNpcmVuIiBEcm9uZQovLyBBIGhpZ2ggcGl0Y2hlZCwgdW5jb21mb3J0YWJsZSBkaXNzb25hbmNlIGluIHRoZSBiYWNrZ3JvdW5kLgokOiBub3RlKCJhNSwgYmI1IikgIC8vIFBsYXlpbmcgQSBhbmQgQmIgdG9nZXRoZXIgY3JlYXRlcyBhICJjbGFzaCIKICAucygiZ21fc3ludGhfc3RyaW5nc18yIikKICAudm93ZWwoIm8iKSAgICAgICAvLyBNYWtlcyBpdCBzb3VuZCBsaWtlIGEgaG9sbG93IGdob3N0CiAgLmdhaW4oMC42KQogIC5zbG93KDQpICAgICAgICAgIC8vIFBsYXlzIHZlcnkgc2xvd2x5IG92ZXIgdGhlIHRvcA%3D%3D"
+            }
+        };
+
+        const sys = {
+            audioCtx: null,
+            iframe: document.getElementById('main-bus'),
+            bootLog: document.getElementById('kernel-log'),
+            container: document.getElementById('system-container'),
+            coldBoot: document.getElementById('cold-boot'),
+            startTime: Date.now(),
+
+            // 1. SYSTEM POWER ON
+            powerOn: function() {
+                window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                this.audioCtx = new AudioContext();
+
+                // Remove Cold Boot Overlay
+                this.coldBoot.style.opacity = '0';
+                setTimeout(() => this.coldBoot.remove(), 500);
+
+                // Play Power Up Sound
+                this.sfx('powerup');
+
+                // Start Text Sequence (Faster!)
+                this.runSequence();
+                
+                // Start Uptime Counter
+                setInterval(this.updateUptime, 1000);
+            },
+
+            // 2. AUDIO SYNTHESIZER
+            sfx: function(type) {
+                if (!this.audioCtx) return;
+                if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+
+                const osc = this.audioCtx.createOscillator();
+                const gain = this.audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(this.audioCtx.destination);
+
+                const now = this.audioCtx.currentTime;
+
+                if (type === 'hover') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(2000, now);
+                    gain.gain.setValueAtTime(0.02, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } 
+                else if (type === 'type') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(400, now);
+                    gain.gain.setValueAtTime(0.03, now);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.03);
+                    osc.start(now);
+                    osc.stop(now + 0.03);
+                }
+                else if (type === 'powerup') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(50, now);
+                    osc.frequency.exponentialRampToValueAtTime(600, now + 0.8);
+                    gain.gain.setValueAtTime(0.1, now);
+                    gain.gain.linearRampToValueAtTime(0, now + 0.8);
+                    osc.start(now);
+                    osc.stop(now + 0.8);
+                }
+            },
+
+            // 3. TEXT SEQUENCE (Slightly Faster)
+            runSequence: function() {
+                const lines = [
+                    "Initializing ANDÚRIL_OS Kernel...",
+                    "Checking UX Heuristics... [OPTIMIZED]",
+                    "Syncing Psycho-Frame Resonance... [100%]",
+                    "Praying to Machine Spirit... [ACCEPTED]",
+                    "Mounting TCG Database... [SECURE]",
+                    "Welcome, Santhu."
+                ];
+
+                let delay = 500; 
+                lines.forEach((line, index) => {
+                    setTimeout(() => {
+                        const p = document.createElement('div');
+                        p.className = 'log-entry';
+                        p.innerText = `> ${line}`;
+                        if(line.includes("Santhu")) p.className += " log-gold";
+                        this.bootLog.appendChild(p);
+                        
+                        this.sfx('type'); 
+                    }, delay);
+                    // Faster pace: 400ms base delay
+                    delay += 400 + (Math.random() * 200); 
+                });
+
+                // FINISH BOOT
+                setTimeout(() => {
+                    this.bootLog.innerHTML = ""; 
+                    
+                    // Reveal Main System
+                    this.container.style.opacity = '1';
+                    this.container.classList.add('power-on-anim');
+
+                    this.mount('neoTokyo', document.querySelector('.io-btn'));
+                }, delay + 800); 
+            },
+
+            // 4. MOUNTING CARTRIDGE
+            mount: function(key, btn) {
+                if (!RESOURCES.tracks[key]) return;
+                
+                this.sfx('hover');
+
+                this.iframe.src = 'about:blank';
+                setTimeout(() => {
+                    this.iframe.src = RESOURCES.tracks[key];
+                }, 50);
+
+                document.querySelectorAll('.io-btn').forEach(b => b.classList.remove('active'));
+                if(btn) btn.classList.add('active');
+            },
+            
+            // 5. UPTIME COUNTER
+            updateUptime: function() {
+                const now = Date.now();
+                const diff = now - sys.startTime;
+                const date = new Date(diff);
+                const str = date.toISOString().substr(11, 8);
+                document.getElementById('uptime').innerText = "UPTIME: " + str;
+            }
+        };
+        
+        console.log("%c ANDÚRIL_OS v7.0 // GOD OF UX", "color: #ffd700; font-size: 20px; font-weight: bold; background: #000; padding: 10px;");
+
+    </script>
+</body>
+</html>
